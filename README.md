@@ -2,6 +2,7 @@
 
 YouTube (bijv. YouProEXTRA) is stil in LiveContainer als de iPhone op stil staat, terwijl YouTube Music het wel doet.
 Deze tweak zet het audiotype van YouTube van Ambient/SoloAmbient naar Playback, zodat de stil-schakelaar het geluid niet meer dempt.
+Daarnaast verbergt hij de Downloads-tab in de balk onderin.
 
 ## Installeren in LiveContainer
 1. Download `YouSoundFix.dylib` uit de Releases.

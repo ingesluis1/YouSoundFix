@@ -2,7 +2,10 @@
 // ook binnen LiveContainer. YouTube kiest daar soms het audiotype
 // Ambient/SoloAmbient, dat de stil-schakelaar volgt. Deze tweak zet dat om
 // naar Playback (zoals YouTube Music doet), dat de schakelaar negeert.
+// Verbergt ook de Downloads-tab in de balk onderin.
 #import <AVFoundation/AVFoundation.h>
+#import <UIKit/UIKit.h>
+#import <objc/runtime.h>
 
 static BOOL gEnabled = NO;
 
@@ -62,6 +65,57 @@ static void YSFEnforce(AVAudioSession *s) {
 
 %end
 
+
+// ---- Downloads-tab in de balk onderin verbergen ----
+@interface YTIFormattedString : NSObject
+- (NSString *)stringWithFormattingRemoved;
+@end
+@interface YTIPivotBarItemRenderer : NSObject
+- (NSString *)pivotIdentifier;
+- (YTIFormattedString *)title;
+@end
+@interface YTIPivotBarSupportedRenderers : NSObject
+- (YTIPivotBarItemRenderer *)pivotBarItemRenderer;
+@end
+@interface YTIPivotBarRenderer : NSObject
+- (NSMutableArray *)itemsArray;
+@end
+
+static BOOL YSFIsDownloads(id item) {
+    if (![item respondsToSelector:@selector(pivotBarItemRenderer)]) return NO;
+    YTIPivotBarItemRenderer *r = [item pivotBarItemRenderer];
+    NSString *pid = [r respondsToSelector:@selector(pivotIdentifier)] ? [r pivotIdentifier] : nil;
+    if ([pid.lowercaseString containsString:@"download"]) return YES;
+    YTIFormattedString *t = [r respondsToSelector:@selector(title)] ? [r title] : nil;
+    NSString *title = [t respondsToSelector:@selector(stringWithFormattingRemoved)] ? [t stringWithFormattingRemoved] : nil;
+    return [title.lowercaseString containsString:@"download"];
+}
+
+%group YSFHideDownloads
+%hook YTPivotBarView
+- (void)setRenderer:(YTIPivotBarRenderer *)renderer {
+    if ([renderer respondsToSelector:@selector(itemsArray)]) {
+        NSMutableArray *items = [renderer itemsArray];
+        NSIndexSet *weg = [items indexesOfObjectsPassingTest:^BOOL(id obj, NSUInteger i, BOOL *stop) {
+            return YSFIsDownloads(obj);
+        }];
+        if (weg.count) [items removeObjectsAtIndexes:weg];
+    }
+    %orig;
+}
+
+// Vangnet: een knop die niet via de renderer komt (bijv. van YouPro zelf).
+- (void)layoutSubviews {
+    %orig;
+    for (UIView *v in ((UIView *)self).subviews) {
+        NSString *label = [v.accessibilityLabel lowercaseString];
+        NSString *ident = [v.accessibilityIdentifier lowercaseString];
+        if ([label containsString:@"download"] || [ident containsString:@"download"]) v.hidden = YES;
+    }
+}
+%end
+%end
+
 %ctor {
     NSString *bid = [[NSBundle mainBundle] bundleIdentifier] ?: @"";
     // Alleen YouTube zelf, niet YouTube Music (die werkt al goed).
@@ -70,5 +124,7 @@ static void YSFEnforce(AVAudioSession *s) {
     if (gEnabled) {
         NSLog(@"[YouSoundFix] actief voor %@", bid);
         YSFEnforce([AVAudioSession sharedInstance]);
+        %init;
+        if (objc_getClass("YTPivotBarView")) %init(YSFHideDownloads);
     }
 }
