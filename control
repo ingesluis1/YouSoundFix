@@ -1,0 +1,9 @@
+Package: nl.inge.yousoundfix
+Name: YouSoundFix
+Version: 1.0.0
+Architecture: iphoneos-arm
+Description: YouTube speelt geluid af als de iPhone op stil staat (ook in LiveContainer).
+Maintainer: Inge
+Author: Inge
+Section: Tweaks
+Depends: mobilesubstrate
