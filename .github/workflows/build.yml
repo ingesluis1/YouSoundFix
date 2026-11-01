@@ -19,12 +19,15 @@ jobs:
           mkdir -p "$HOME/theos/sdks"
           git clone --depth 1 https://github.com/theos/sdks.git /tmp/sdks
           cp -R /tmp/sdks/iPhoneOS16.5.sdk "$HOME/theos/sdks/"
-          brew install ldid make || true
+          brew install make
+          brew install ldid || brew install ldid-procursus || true
+          echo "$(brew --prefix make)/libexec/gnubin" >> "$GITHUB_PATH"
           echo "THEOS=$HOME/theos" >> "$GITHUB_ENV"
 
       - name: Bouwen
         run: |
-          gmake package FINALPACKAGE=1 THEOS_PACKAGE_SCHEME=rootless TARGET=iphone:clang:16.5:14.0
+          make --version | head -1
+          make package FINALPACKAGE=1 THEOS_PACKAGE_SCHEME=rootless TARGET=iphone:clang:16.5:14.0
           mkdir -p out
           cp .theos/obj/YouSoundFix.dylib out/
           cp packages/*.deb out/
